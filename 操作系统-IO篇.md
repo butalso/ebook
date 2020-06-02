@@ -184,6 +184,6 @@ ready_list移除：
 于是，在epoll_wait返回socket_fd可读的时候，我们需要小心处理，要不然会造成死锁和socket饿死现象。典型如listen_fd返回可读的时候，我们需要不断的accept直到EAGAIN。假设同时有三个请求到达，epoll_wait返回listen_fd可读，这个时候，如果仅仅accept一次拿走一个请求去处理，那么就会留下两个请求，如果这个时候一直没有新的请求到达，那么再次调用epoll_wait是不会通知listen_fd可读的，于是epoll_wait只能睡眠到超时才返回，遗留下来的两个请求一直得不到处理，处于饿死状态。
 
 ## 参考链接
-<https://cloud.tencent.com/developer/article/1005481>
-<https://www.ibm.com/developerworks/cn/linux/l-cn-directio>
-<https://segmentfault.com/a/1190000003063859>
+* <https://cloud.tencent.com/developer/article/1005481>
+* <https://www.ibm.com/developerworks/cn/linux/l-cn-directio>
+* <https://segmentfault.com/a/1190000003063859>
