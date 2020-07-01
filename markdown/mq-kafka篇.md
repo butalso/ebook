@@ -57,10 +57,15 @@ kafka每个partition中的消息在写入时都是有序的，消费时，每个
 ### 分区器
 消息经过序列化之后就需要确定它发往的分区，如果消息ProducerRecord中指定了partition字段，那么就不需要分区器的作用，因为partition代表的就是所要发往的分区号。如果消息ProducerRecord中没有指定partition字段，那么就需要依赖分区器。分区器根据key字段来计算partition的值，为消息分配分区。分区器包含三个方法`configure,partition,close`
 
-
 ## Kafka生产者客户端的整体结构是什么样子的？
+整个生产者客户端由主线程、发送线程两个线程协调运行。KafkaProducer在主线程中创建消息，然后通过拦截器、序列化器、分区器作用之后缓存到消息累积器（RecordAccumulator），发送线程负责从消息累积器中获取消息并将其发送到Kafka中。
+### 消息累积器（RecordAccumulator）
+消息累积器主要用来缓存消息以便发送线程可以批量发送，进而减少网络传输的资源消耗以提升性能。缓存大小由客户端参数`buffer.memory`控制，默认为32MB。如果生产者发送消息的速度超过发送到服务器的速度，则会导致生产者空间不足，这时，KafkaProducer调用send()方法要么被阻塞，要么抛出异常。
 
-Kafka生产者客户端中使用了几个线程来处理？分别是什么？
+消息累积器为每个分区维护一个双端队列，队列内容是ProducerBatch，消息写入缓存时，追加到双端队列尾部。发送线程从队列头部读取ProducerBatch。ProducerBatch表示一个消息批次，可以包含一个到多个ProducerRecord，这样可以使字节的使用更加紧凑，同时，将较小的ProducerRecord拼凑成一个较大的ProducerBatch，这样可以减少网络请求次数以提升整体吞吐量。
+
+在消息累积器内部还使用了BufferPool来实现ByteBuffer的复用，避免频繁的内存申请和释放。由参数`batch.size`指定大小。
+
 
 Kafka的旧版Scala的消费者客户端的设计有什么缺陷？
 
